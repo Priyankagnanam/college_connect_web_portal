@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCEE Admin - Organized Upload</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/modern-ui.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+        }
+
+        .form-card {
+            background: var(--card-bg-light);
+            backdrop-filter: blur(16px);
+            max-width: 550px;
+            margin: 20px auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-light);
+        }
+
+        h2 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-light);
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+            background: var(--card-bg-light);
+        }
+
+        #materialType {
+            border: 2px solid var(--primary);
+            background: rgba(0, 128, 128, 0.05);
+            /* Keep subtle tint but variable if possible, or override */
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        #msg {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dynamic-bg"></div>
+
+    <div class="form-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;"><i class="fas fa-upload"></i> Post Study Material</h2>
+        </div>
+        <form id="notesForm">
+            <div class="group">
+                <label>Department</label>
+                <select id="dept" required>
+                    <option value="">-- Select Department --</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">MECH</option>
+                    <option value="CIVIL">CIVIL</option>
+                    <option value="IT">IT</option>
+                    <option value="AUTO">AUTO</option>
+                </select>
+            </div>
+
+            <div class="group">
+                <label>Year</label>
+                <select id="year" required>
+                    <option value="">-- Select Year --</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="group">
+                    <label>Subject</label>
+                    <input type="text" id="subject" placeholder="eg: DSA" required>
+                </div>
+                <div class="group">
+                    <label>Topic / Unit</label>
+                    <input type="text" id="topic" placeholder="eg: Unit-1" required>
+                </div>
+            </div>
+
+            <div class="group">
+                <label>Material Type</label>
+                <select id="materialType" required>
+                    <option value="">-- What is this? --</option>
+                    <option value="Notes">Notes</option>
+                    <option value="Syllabus">Syllabus</option>
+                    <option value="Question Paper">Question Paper</option>
+                </select>
+            </div>
+
+            <div class="group">
+                <label>Google Drive / File Link</label>
+                <input type="url" id="driveUrl" placeholder="Paste the link here" required>
+            </div>
+
+            <button type="submit" class="btn">Upload to Database</button>
+        </form>
+        <p id="msg"></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
+            authDomain: "college-connect-2cd42.firebaseapp.com",
+            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "college-connect-2cd42",
+            storageBucket: "college-connect-2cd42.firebasestorage.app",
+            messagingSenderId: "16394931571",
+            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        document.getElementById('notesForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('msg');
+
+            const subName = document.getElementById('subject').value.trim();
+            const topicName = document.getElementById('topic').value.trim();
+
+            // Merging Subject and Topic for the student view [cite: 2026-01-15]
+            const fullSubjectTitle = `${subName} - ${topicName}`;
+
+            const notesData = {
+                dept: document.getElementById('dept').value,
+                year: document.getElementById('year').value,
+                subject: fullSubjectTitle,
+                type: document.getElementById('materialType').value,
+                fileUrl: document.getElementById('driveUrl').value,
+                timestamp: new Date().getTime()
+            };
+
+            push(ref(db, 'study_materials'), notesData).then(() => {
+                msg.style.color = "green";
+                msg.innerText = `✅ Uploaded: ${fullSubjectTitle}`;
+                document.getElementById('notesForm').reset();
+            }).catch((err) => {
+                msg.style.color = "red";
+                msg.innerText = "❌ Error: " + err.message;
+            });
+        });
+    </script>
+
+
+    <script src="../js/ui.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply Leave - College Connect</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/modern-ui.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            color: #008080;
+        }
+
+        /* Use variable background */
+        .form-card {
+            background: var(--card-bg-light);
+            backdrop-filter: blur(16px);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            max-width: 600px;
+            margin: auto;
+            border: 1px solid var(--border-light);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        .auto-info {
+            background: rgba(0, 128, 128, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #008080;
+            border: 1px dashed #008080;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.5);
+            color: var(--text-light);
+        }
+
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(129, 140, 248, 0.3);
+            color: white;
+        }
+
+        .date-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .submit-btn {
+            background: #008080;
+            color: white;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            background: #006666;
+        }
+
+        #statusMsg {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dynamic-bg"></div>
+
+    <div class="header">
+        <a href="index.html" style="color: #008080;"><i class="fas fa-arrow-left fa-lg"></i></a>
+        <h2>Apply for Leave</h2>
+    </div>
+
+    <div class="form-card">
+        <div id="studentProfile" class="auto-info">
+            <i class="fas fa-sync fa-spin"></i> Fetching profile...
+        </div>
+
+        <form id="leaveForm">
+            <div class="input-group">
+                <label>Leave Type</label>
+                <select id="leaveType" required>
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="On Duty (OD)">On Duty (OD)</option>
+                    <option value="Personal Reason">Personal Reason</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>Duration</label>
+                <select id="duration" onchange="toggleDateFields()">
+                    <option value="single">Single Day</option>
+                    <option value="multiple">Multiple Days</option>
+                </select>
+            </div>
+
+            <div id="singleDateGroup" class="input-group">
+                <label>Leave Date</label>
+                <input type="date" id="singleDate">
+            </div>
+
+            <div id="multipleDateGroup" class="date-grid hidden">
+                <div class="input-group">
+                    <label>From Date</label>
+                    <input type="date" id="fromDate">
+                </div>
+                <div class="input-group">
+                    <label>To Date</label>
+                    <input type="date" id="toDate">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Reason</label>
+                <textarea id="reason" rows="4" placeholder="Explain your reason..." required></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn" class="submit-btn" disabled>Submit Request</button>
+        </form>
+        <div id="statusMsg"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
+            authDomain: "college-connect-2cd42.firebaseapp.com",
+            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "college-connect-2cd42",
+            storageBucket: "college-connect-2cd42.firebasestorage.app",
+            messagingSenderId: "16394931571",
+            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const loggedInID = sessionStorage.getItem("studentID") || sessionStorage.getItem("userId");
+        if (!loggedInID) {
+            window.location.replace("../login.html");
+        }
+        let studentDetails = { name: "", dept: "", year: "" };
+
+        // 1. Show/Hide Logic [cite: 2026-01-15]
+        window.toggleDateFields = function () {
+            const dur = document.getElementById('duration').value;
+            const single = document.getElementById('singleDateGroup');
+            const multiple = document.getElementById('multipleDateGroup');
+
+            if (dur === 'single') {
+                single.classList.remove('hidden');
+                multiple.classList.add('hidden');
+            } else {
+                single.classList.add('hidden');
+                multiple.classList.remove('hidden');
+            }
+        };
+
+        // 2. Fetch Profile [cite: 2026-01-15]
+        async function initProfile() {
+            try {
+                const snapshot = await get(ref(db, `users/${loggedInID.toUpperCase()}`));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    studentDetails = { name: data.name, dept: data.dept, year: data.year };
+                    document.getElementById('studentProfile').innerHTML = `<i class="fas fa-user-check"></i> Applying as: <b>${data.name} (${data.dept} - Year ${data.year})</b>`;
+                    document.getElementById('submitBtn').disabled = false;
+                }
+            } catch (e) { console.error(e); }
+        }
+        initProfile();
+
+        // 3. Submit Logic [cite: 2026-01-15]
+        document.getElementById('leaveForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const dur = document.getElementById('duration').value;
+            let finalFrom, finalTo, days;
+
+            if (dur === 'single') {
+                finalFrom = document.getElementById('singleDate').value;
+                finalTo = finalFrom;
+                days = 1;
+                if (!finalFrom) { alert("Select date!"); return; }
+            } else {
+                finalFrom = document.getElementById('fromDate').value;
+                finalTo = document.getElementById('toDate').value;
+                if (!finalFrom || !finalTo) { alert("Select dates!"); return; }
+                const start = new Date(finalFrom);
+                const end = new Date(finalTo);
+                days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                if (days <= 0) { alert("Invalid date range!"); return; }
+            }
+
+            const leaveData = {
+                studentID: loggedInID,
+                name: studentDetails.name,
+                dept: studentDetails.dept,
+                year: studentDetails.year,
+                type: document.getElementById('leaveType').value,
+                fromDate: finalFrom,
+                toDate: finalTo,
+                totalDays: days,
+                reason: document.getElementById('reason').value,
+                status: "Pending",
+                timestamp: new Date().toISOString()
+            };
+
+            push(ref(db, 'leaverequests'), leaveData).then(() => {
+                document.getElementById('statusMsg').innerText = "Request Sent Successfully!";
+                document.getElementById('leaveForm').reset();
+                toggleDateFields();
+            });
+        });
+    </script>
+
+
+    <script src="../js/ui.js"></script>
+</body>
+
+</html>

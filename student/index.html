@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCE Erode - Student Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/modern-ui.css">
+    <style>
+        /* Specific Dashboard Tweaks */
+        body {
+            padding-top: 80px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--card-bg-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            text-decoration: none;
+            transition: 0.4s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            aspect-ratio: 1/1;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 128, 128, 0.2);
+            border-color: var(--primary);
+        }
+
+        .card i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+
+        .card span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dynamic-bg"></div>
+
+    <!-- Auth Shield -->
+    <div id="auth-shield"
+        style="position: fixed; inset: 0; background: var(--bg-light); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--primary);"></i>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="#" class="nav-brand"><i class="fas fa-user-graduate"></i> Student Panel</a>
+
+        <div class="nav-links">
+            <!-- Profile Dropdown -->
+            <div class="profile-menu">
+                <div class="profile-btn">
+                    <div class="avatar-initial" id="avatarInitial">S</div>
+                    <span id="displayName" style="font-weight: 600;">Student</span>
+                    <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+                </div>
+                <div class="dropdown-content">
+                    <div class="dropdown-header">
+                        <small style="color: var(--text-light); opacity: 0.7;">Signed in as</small><br>
+                        <strong id="displayId">...</strong>
+                    </div>
+
+                    <a href="#" class="dropdown-item" onclick="handleLogout()" style="color: #ef4444;"><i
+                            class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+        <div class="dashboard">
+            <a href="announcements.html" class="card"><i class="fas fa-bullhorn"></i><span>Announcement</span></a>
+            <a href="attendance.html" class="card"><i class="fas fa-calendar-check"></i><span>My Attendance</span></a>
+            <a href="view-notes.html" class="card"><i class="fas fa-book-open"></i><span>View Notes</span></a>
+            <a href="view-marks.html" class="card"><i class="fas fa-chart-line"></i><span>View Marks</span></a>
+            <a href="leave-request.html" class="card"><i class="fas fa-paper-plane"></i><span>Apply Leave</span></a>
+            <a href="leave-status.html" class="card"><i class="fas fa-info-circle"></i><span>Leave Status</span></a>
+        </div>
+    </div>
+
+
+
+    <!-- Sidebar injected via ui.js -->
+    <script src="../js/ui.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { checkSession } from "../js/auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
+            authDomain: "college-connect-2cd42.firebaseapp.com",
+            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "college-connect-2cd42",
+            storageBucket: "college-connect-2cd42.firebasestorage.app",
+            messagingSenderId: "16394931571",
+            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messaging = getMessaging(app);
+
+        // --- SESSION LOGIC ---
+        window.onload = function () {
+            // Check if student is logged in
+            const user = checkSession('student');
+
+            if (user) {
+                const name = user.name || "Student";
+                document.getElementById('displayName').innerText = name;
+                document.getElementById('displayId').innerText = user.id || "";
+                document.getElementById('avatarInitial').innerText = name.charAt(0).toUpperCase();
+
+                // Remove shield
+                document.getElementById('auth-shield').style.display = 'none';
+
+                // Setup notifications
+                if (user.id) {
+                    setupNotifications(user.id);
+                }
+            }
+        };
+
+
+
+        // --- LOGOUT LOGIC ---
+        window.handleLogout = function () {
+            sessionStorage.clear();
+            window.location.replace("../login.html");
+        };
+
+        // --- NOTIFICATIONS SETUP ---
+        async function setupNotifications(dbPath) {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    // Make sure the SW path is correct based on your folder structure [cite: 2026-01-15]
+                    const registration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+
+                    const token = await getToken(messaging, {
+                        vapidKey: 'BPBURlporDMiTApSW3okYYSHPVBzPSu684TR5rGUT1L32soIARYbCVuTEpnI1rAddTzx8WHfM61aqEI3bueeuSY',
+                        serviceWorkerRegistration: registration
+                    });
+
+                    if (token) {
+                        await set(ref(db, `users/${dbPath}/fcmToken`), token);
+                    }
+                }
+            } catch (err) {
+                console.warn("Notification error:", err);
+            }
+        }
+
+        onMessage(messaging, (payload) => {
+            alert(`New Notification: ${payload.notification.title}`);
+        });
+    </script>
+</body>
+
+</html>

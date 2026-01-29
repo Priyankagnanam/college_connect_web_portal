@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration - College Connect</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/modern-ui.css">
+</head>
+
+<body>
+    <div class="dynamic-bg"></div>
+
+    <nav class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
+        <a href="index.html" class="nav-brand"><i class="fas fa-university"></i> CollegeConnect</a>
+        <a href="index.html" style="text-decoration: none; color: white; font-weight: bold; font-size: 14px; background: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 8px; transition: 0.3s;">
+            <i class="fas fa-home"></i> Back to Home
+        </a>
+    </nav>
+
+    <main style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 100px 20px 40px;">
+        <div class="glass-card" style="padding: 30px; width: 100%; max-width: 500px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: var(--primary);">Create Account</h2>
+                <p>Join the digital campus</p>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: bold; color: var(--text-light);">Register As</label>
+                <input type="text" id="displayRole" value="Student" readonly
+                    style="background: rgba(0,0,0,0.05); cursor: not-allowed; opacity: 0.7;">
+                <input type="hidden" id="regRole" value="student">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: bold;">Full Name</label>
+                <input type="text" id="regName" placeholder="Enter your full name">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: bold;">Personal Email ID</label>
+                <input type="email" id="regEmail" placeholder="e.g. name@gmail.com"
+                    oninput="this.value = this.value.toLowerCase()">
+                <div style="font-size: 11px; color: #666; margin-top: 5px;">Must be @gmail.com and small letters only.
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label id="idLabel" style="font-size: 13px; font-weight: bold;">User ID</label>
+                <input type="text" id="regID" placeholder="Roll number">
+            </div>
+
+            <div id="studentFields"
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="font-size: 13px; font-weight: bold;">Department</label>
+                    <select id="regDept">
+                        <option value="IT">IT (IMT)</option>
+                        <option value="CSE">CSE (CSE)</option>
+                        <option value="ECE">ECE (ECE)</option>
+                        <option value="EEE">EEE (EEE)</option>
+                        <option value="MECH">MECH (MCE)</option>
+                        <option value="AUTO">AUTOMOBILE (ATE)</option>
+                        <option value="CIVIL">CIVIL (CVE)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 13px; font-weight: bold;">Current Year</label>
+                    <select id="regYear">
+                        <option value="1">1st Year</option>
+                        <option value="2">2nd Year</option>
+                        <option value="3">3rd Year</option>
+                        <option value="4">4th Year</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; position: relative;">
+                <label style="font-size: 13px; font-weight: bold;">Password</label>
+                <input type="password" id="regPass" placeholder="Set password" style="padding-right: 40px;">
+                <i class="fas fa-eye" id="togglePassword"
+                    style="position: absolute; right: 15px; top: 38px; cursor: pointer; color: var(--primary);"></i>
+                <div id="regPassHint" style="font-size: 11px; color: #ef4444; margin-top: 5px; display: none;">
+                    Min 6 chars, start with alphabet, special char required.
+                </div>
+            </div>
+
+            <button class="btn-reg btn-primary" onclick="registerUser()" style="width: 100%;">
+                Create Account
+            </button>
+
+            <div style="text-align: center; margin-top: 15px; font-size: 14px;">
+                Already have an account? <a href="login.html"
+                    style="color: var(--primary); font-weight: bold;">Login</a>
+            </div>
+        </div>
+    </main>
+    <script src="js/ui.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
+            authDomain: "college-connect-2cd42.firebaseapp.com",
+            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "college-connect-2cd42",
+            storageBucket: "college-connect-2cd42.firebasestorage.app",
+            messagingSenderId: "16394931571",
+            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --- Eye Icon Logic ---
+        const togglePassword = document.querySelector('#togglePassword');
+        const passwordInput = document.querySelector('#regPass');
+
+        togglePassword.addEventListener('click', function () {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            this.classList.toggle('fa-eye-slash');
+            this.classList.toggle('fa-eye');
+        });
+
+        // --- Enter Key & Focus Flow Logic [cite: 2026-01-15] ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const fields = ['regName', 'regEmail', 'regID', 'regDept', 'regYear', 'regPass'];
+
+            fields.forEach((id, index) => {
+                const currentField = document.getElementById(id);
+                if (!currentField) return;
+
+                currentField.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (id === 'regPass') {
+                            window.registerUser();
+                        } else {
+                            const nextField = document.getElementById(fields[index + 1]);
+                            if (nextField) nextField.focus();
+                        }
+                    }
+                });
+            });
+        });
+
+        // --- Registration Logic [cite: 2026-01-15] ---
+        window.registerUser = async function () {
+            const role = document.getElementById('regRole').value;
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const rawID = document.getElementById('regID').value.trim();
+            const pass = document.getElementById('regPass').value;
+            const dept = document.getElementById('regDept').value;
+            const year = document.getElementById('regYear').value;
+
+            if (!name || !email || !rawID || !pass) {
+                alert("Please fill in all details!");
+                return;
+            }
+
+            // Password validation
+            const passRegex = /^[a-zA-Z](?=.*[._!@#$%^&*]).{5,}$/;
+            if (!passRegex.test(pass)) {
+                document.getElementById('regPassHint').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('regPassHint').style.display = 'none';
+            }
+
+            const gmailRegex = /^[a-z][a-z0-9._%+-]*@gmail\.com$/;
+            if (!gmailRegex.test(email)) {
+                alert("Invalid Email Requirements!");
+                return;
+            }
+
+            let dbID = rawID.replace(/\./g, '_').toUpperCase();
+
+            const strongPassRegex = /^[A-Za-z](?=.*[!@#$%^&*_])(?=.{5,})/;
+            if (!strongPassRegex.test(pass)) {
+                alert("Password Requirements not met!");
+                return;
+            }
+
+            const codes = { "IT": "IMT", "CSE": "CSE", "ECE": "ECE", "EEE": "EEE", "AUTO": "ATE", "CIVIL": "CVE", "MECH": "MCE" };
+            if (!dbID.includes(codes[dept])) {
+                alert(`Invalid Roll Number for ${dept}!`);
+                return;
+            }
+
+            try {
+                const userRef = ref(db, `users/${dbID}`);
+                const snap = await get(userRef);
+
+                if (snap.exists()) {
+                    alert("This Roll Number is already registered!");
+                    return;
+                }
+
+                await set(userRef, {
+                    name,
+                    email,
+                    id: rawID,
+                    role,
+                    dept,
+                    year,
+                    password: pass
+                });
+
+                alert("Account Created Successfully!");
+                window.location.href = "login.html";
+
+            } catch (e) {
+                console.error(e);
+                alert("Connection error. Please try again.");
+            }
+        }
+    </script>
+</body>
+
+</html>

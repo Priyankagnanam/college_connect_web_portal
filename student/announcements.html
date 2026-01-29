@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Announcements - College Connect</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/modern-ui.css">
+    <style>
+        /* * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; } handled by modern-ui */
+        /* Corrected CSS */
+        /* body { padding-bottom: 80px; handled by layout usually, but ok here } */
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--primary);
+            margin-bottom: 25px;
+            padding: 10px 5px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-left h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .header a {
+            color: var(--text-light);
+            text-decoration: none;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        .info-bar {
+            background: var(--card-bg-light);
+            backdrop-filter: blur(12px);
+            color: var(--text-light);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .announcement-card {
+            background: var(--card-bg-light);
+            backdrop-filter: blur(16px);
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-light);
+            border-left: 5px solid var(--primary);
+            transition: transform 0.2s;
+        }
+
+        .announcement-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .announcement-card h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .announcement-card p {
+            color: var(--text-light);
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dynamic-bg"></div>
+
+    <div class="header">
+        <div class="header-left">
+            <a href="index.html" title="Back"><i class="fas fa-arrow-left fa-lg"></i></a>
+            <h2>Announcements</h2>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="info-bar" id="studentContextBar">
+            <div>
+                <strong>Dept: </strong><span id="d-dept">Loading...</span><br>
+                <strong>Roll No: </strong><span id="d-roll">...</span>
+            </div>
+            <div style="text-align: right;">
+                <strong>Year: </strong><span id="d-year">...</span>
+            </div>
+        </div>
+
+        <div id="announcement-list">
+            <p style="text-align: center; color: #94a3b8; margin-top: 20px;">Fetching relevant news...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
+            authDomain: "college-connect-2cd42.firebaseapp.com",
+            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "college-connect-2cd42",
+            storageBucket: "college-connect-2cd42.firebasestorage.app",
+            messagingSenderId: "16394931571",
+            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Use studentID from session to fetch real-time context [cite: 2026-01-15]
+        const studentID = sessionStorage.getItem("studentID") || sessionStorage.getItem("userId");
+
+        async function initPage() {
+            if (!studentID) {
+                window.location.replace("../login.html");
+                return;
+            }
+
+            // 1. Fetch Student Info for Header [cite: 2026-01-15]
+            const userRef = ref(db, `users/${studentID.replace(/\./g, '_').toUpperCase()}`);
+            const userSnap = await get(userRef);
+
+            let currentDept = "All";
+            let currentYear = "All";
+
+            if (userSnap.exists()) {
+                const u = userSnap.val();
+                currentDept = u.dept || "All";
+                currentYear = u.year || "All";
+
+                document.getElementById('d-dept').innerText = currentDept;
+                document.getElementById('d-roll').innerText = u.id || studentID;
+                document.getElementById('d-year').innerText = currentYear + (isNaN(currentYear) ? "" : " Year");
+            }
+
+            // 2. Load & Filter Announcements [cite: 2026-01-15]
+            const listDiv = document.getElementById('announcement-list');
+            onValue(ref(db, 'announcements'), (snapshot) => {
+                listDiv.innerHTML = "";
+                if (snapshot.exists()) {
+                    const items = Object.values(snapshot.val()).sort((a, b) => b.timestamp - a.timestamp);
+                    let count = 0;
+
+                    items.forEach(item => {
+                        const isDeptOk = (currentDept === "ADMIN" || currentDept === "All") ||
+                            (item.targetDepts && (item.targetDepts.includes(currentDept) || item.targetDepts.includes("All")));
+
+                        const isYearOk = (currentYear === "All") ||
+                            (item.targetYears && (item.targetYears.includes(String(currentYear)) || item.targetYears.includes("All")));
+
+                        if (isDeptOk && isYearOk) {
+                            count++;
+                            listDiv.innerHTML += `
+                                <div class="announcement-card">
+                                    <h3>${item.title}</h3>
+                                    <p>${item.message}</p>
+                                </div>`;
+                        }
+                    });
+
+                    if (count === 0) {
+                        listDiv.innerHTML = `<p style="text-align:center; color:#94a3b8; margin-top:50px;">No specific announcements for ${currentDept} ${currentYear}.</p>`;
+                    }
+                } else {
+                    listDiv.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">No announcements available.</p>';
+                }
+            });
+        }
+
+        initPage();
+    </script>
+
+
+    <script src="../js/ui.js"></script>
+</body>
+
+</html>

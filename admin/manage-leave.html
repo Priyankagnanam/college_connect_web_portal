@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Leaves - Advisor Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/modern-ui.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            color: var(--text-light);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .advisor-badge {
+            background: rgba(0, 128, 128, 0.1);
+            color: var(--primary);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            border: 1px dashed var(--primary);
+        }
+
+        .leave-card {
+            background: var(--card-bg-light);
+            backdrop-filter: blur(16px);
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-light);
+            border-left-width: 5px;
+        }
+
+        .student-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .student-id {
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .days-tag {
+            background: #ff9800;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .approve {
+            color: white;
+            background: #27ae60;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .reject {
+            color: white;
+            background: #e74c3c;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dynamic-bg"></div>
+
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid var(--primary); margin-bottom: 20px;">
+        <h2 style="border: none; padding: 0; margin: 0;"><i class="fas fa-tasks"></i> Advisor Approval Portal</h2>
+    </div>
+
+    <div id="advisorDetails" class="advisor-badge">
+        <i class="fas fa-user-tie"></i> Checking Advisor Profile...
+    </div>
+
+    <div id="leaveList">Loading requests...</div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
+            authDomain: "college-connect-2cd42.firebaseapp.com",
+            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "college-connect-2cd42",
+            storageBucket: "college-connect-2cd42.firebasestorage.app",
+            messagingSenderId: "16394931571",
+            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const advDept = sessionStorage.getItem("dept") || "IT";
+        const advYear = sessionStorage.getItem("year") || "3";
+        const advName = sessionStorage.getItem("userName") || "Advisor";
+
+        document.getElementById('advisorDetails').innerHTML =
+            `<i class="fas fa-user-tie"></i> Welcome <b>${advName}</b> | Advisor for: <b>${advDept} - Year ${advYear}</b>`;
+
+        const leaveRef = ref(db, 'leaverequests/');
+
+        onValue(leaveRef, (snapshot) => {
+            const listDiv = document.getElementById('leaveList');
+            listDiv.innerHTML = "";
+
+            let count = 0;
+
+            if (!snapshot.exists()) {
+                listDiv.innerHTML = "<p style='text-align:center;'>No requests in database.</p>";
+                return;
+            }
+
+            snapshot.forEach(child => {
+                const data = child.val();
+
+                if (data.status === "Pending" && data.dept === advDept && data.year === advYear) {
+                    count++;
+                    listDiv.innerHTML += `
+                        <div class="leave-card">
+                            <div class="student-info">
+                                <p class="student-id"><i class="fas fa-user-graduate"></i> ${data.name} (${data.studentID})</p>
+                                <p><strong>Period:</strong> ${data.fromDate} to ${data.toDate} <span class="days-tag">${data.totalDays} Days</span></p>
+                                <p><strong>Type:</strong> ${data.type}</p>
+                                <p><strong>Reason:</strong> ${data.reason}</p>
+                            </div>
+                            <div class="btn-group">
+                                <button class="approve" onclick="updateStatus('${child.key}', 'Approved')"><i class="fas fa-check"></i> Approve</button>
+                                <button class="reject" onclick="updateStatus('${child.key}', 'Rejected')"><i class="fas fa-times"></i> Reject</button>
+                            </div>
+                        </div>`;
+                }
+            });
+
+            if (count === 0) {
+                listDiv.innerHTML = "<p style='text-align:center;'>No pending requests for your Department/Year.</p>";
+            }
+        });
+
+        window.updateStatus = function (requestId, newStatus) {
+            update(ref(db, 'leaverequests/' + requestId), { status: newStatus })
+                .then(() => {
+                    alert("Request has been " + newStatus);
+                })
+                .catch((error) => {
+                    console.error("Update failed: ", error);
+                });
+        }
+    </script>
+
+
+    <script src="../js/ui.js"></script>
+</body>
+
+</html>

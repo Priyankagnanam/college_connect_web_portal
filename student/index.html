@@ -116,34 +116,19 @@
 
 
     <!-- Sidebar injected via ui.js -->
+    <script src="../js/guard.js"></script>
     <script src="../js/ui.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { app, db } from "../js/firebase-config.js";
         import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-        import { checkSession } from "../js/auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
-            authDomain: "college-connect-2cd42.firebaseapp.com",
-            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "college-connect-2cd42",
-            storageBucket: "college-connect-2cd42.firebasestorage.app",
-            messagingSenderId: "16394931571",
-            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        import { requireRole } from "../js/auth.js";
+        import { ref, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         const messaging = getMessaging(app);
 
         // --- SESSION LOGIC ---
         window.onload = function () {
-            // Check if student is logged in
-            const user = checkSession('student');
-
-            if (user) {
+            requireRole('student', (user) => {
                 const name = user.name || "Student";
                 document.getElementById('displayName').innerText = name;
                 document.getElementById('displayId').innerText = user.id || "";
@@ -156,7 +141,7 @@
                 if (user.id) {
                     setupNotifications(user.id);
                 }
-            }
+            });
         };
 
 

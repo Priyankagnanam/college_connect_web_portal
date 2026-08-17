@@ -1,0 +1,8 @@
+{
+  "name": "college-connect-web-portal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check js/auth.js && node --check js/firebase-config.js && node --check js/guard.js && node --check js/ui.js"
+  }
+}

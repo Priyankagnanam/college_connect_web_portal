@@ -1,6 +1,13 @@
-// js/auth.js
-import { db } from "./firebase-config.js";
-import { ref, set, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { auth, db } from "./firebase-config.js";
+import {
+    createUserWithEmailAndPassword,
+    deleteUser,
+    onAuthStateChanged,
+    sendPasswordResetEmail,
+    signInWithEmailAndPassword,
+    signOut
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { equalTo, get, orderByChild, query, ref, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 /**
  * Formats the ID for Firebase keys (e.g., replaces '.' with '_').
@@ -18,35 +25,18 @@ export async function loginUser(rawID, password) {
         throw new Error("Please enter both ID and Password.");
     }
 
-    const dbPath = formatID(rawID);
-    const userRef = ref(db, `users/${dbPath}`);
+    const lookupField = rawID.includes("@") ? "email" : "id";
+    const snapshot = await get(query(ref(db, "loginDirectory"), orderByChild(lookupField), equalTo(rawID.trim())));
+    if (!snapshot.exists()) throw new Error("User ID not found!");
 
-    try {
-        const snapshot = await get(userRef);
-        if (snapshot.exists()) {
-            const userData = snapshot.val();
+    const [key, directoryData] = Object.entries(snapshot.val())[0];
+    const credential = await signInWithEmailAndPassword(auth, directoryData.email, password);
+    const profileSnapshot = await get(ref(db, `profiles/${credential.user.uid}`));
+    if (!profileSnapshot.exists()) throw new Error("Account profile not found.");
+    const userData = profileSnapshot.val();
 
-            // NOTE: In production, hash passwords!
-            if (userData.password === password) {
-                // Set Session
-                sessionStorage.setItem("isLoggedIn", "true");
-                sessionStorage.setItem("role", userData.role);
-                sessionStorage.setItem("userName", userData.name || "User");
-                sessionStorage.setItem("userId", dbPath); // Common ID
-                sessionStorage.setItem("userEmail", userData.email || "");
-                sessionStorage.setItem("dept", userData.dept || "");
-                sessionStorage.setItem("year", userData.year || "");
-
-                return userData;
-            } else {
-                throw new Error("Invalid Password!");
-            }
-        } else {
-            throw new Error("User ID not found!");
-        }
-    } catch (error) {
-        throw error;
-    }
+    saveSession(key, { ...userData, uid: credential.user.uid });
+    return { ...userData, uid: credential.user.uid, id: key };
 }
 
 /**
@@ -56,18 +46,25 @@ export async function registerUser(data) {
     const { name, email, id, role, dept, year, password } = data;
     const dbID = formatID(id);
 
-    // Check if user exists
-    const userRef = ref(db, `users/${dbID}`);
-    const snapshot = await get(userRef);
+    if (role !== "student") throw new Error("Only student self-registration is allowed.");
+    const snapshot = await get(ref(db, `loginDirectory/${dbID}`));
 
     if (snapshot.exists()) {
         throw new Error("User ID already registered!");
     }
 
-    // Save
-    await set(userRef, {
-        name, email, id, role, dept, year, password
-    });
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const profile = { name, email, id: dbID, rollNumber: id, role, dept, year, uid: credential.user.uid };
+    try {
+        await update(ref(db), {
+            [`users/${dbID}`]: profile,
+            [`profiles/${credential.user.uid}`]: profile,
+            [`loginDirectory/${dbID}`]: { id, email, role, uid: credential.user.uid }
+        });
+    } catch (error) {
+        await deleteUser(credential.user);
+        throw error;
+    }
 
     return true;
 }
@@ -75,9 +72,12 @@ export async function registerUser(data) {
 /**
  * Logout
  */
-export function logout() {
+export async function logout() {
+    await signOut(auth);
     sessionStorage.clear();
-    window.location.href = "../login.html"; // Adjust path as needed
+    window.location.href = window.location.pathname.includes("/") && window.location.pathname.includes("/student/")
+        ? "../login.html"
+        : "../login.html";
 }
 
 /**
@@ -106,4 +106,47 @@ export function checkSession(requiredRole = null) {
         dept: sessionStorage.getItem("dept"),
         year: sessionStorage.getItem("year")
     };
+}
+
+export function saveSession(userId, userData) {
+    sessionStorage.setItem("isLoggedIn", "true");
+    sessionStorage.setItem("role", userData.role || "student");
+    sessionStorage.setItem("userName", userData.name || "User");
+    sessionStorage.setItem("userId", userId);
+    sessionStorage.setItem("studentID", userId);
+    sessionStorage.setItem("userEmail", userData.email || "");
+    sessionStorage.setItem("dept", userData.dept || "");
+    sessionStorage.setItem("year", userData.year || "");
+}
+
+export function requireRole(requiredRole, onAuthorized) {
+    return new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            unsubscribe();
+            if (!firebaseUser) {
+                window.location.replace("../login.html");
+                resolve(null);
+                return;
+            }
+
+            const profileSnapshot = await get(ref(db, `profiles/${firebaseUser.uid}`));
+            const profile = profileSnapshot.exists() ? profileSnapshot.val() : null;
+            if (!profile || profile.role !== requiredRole) {
+                await signOut(auth);
+                sessionStorage.clear();
+                window.location.replace("../login.html");
+                resolve(null);
+                return;
+            }
+
+            const result = { id: formatID(profile.id), ...profile, uid: firebaseUser.uid };
+            saveSession(result.id, result);
+            if (onAuthorized) onAuthorized(result);
+            resolve(result);
+        });
+    });
+}
+
+export async function resetPassword(email) {
+    return sendPasswordResetEmail(auth, email);
 }

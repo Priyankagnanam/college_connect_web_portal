@@ -8,12 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/modern-ui.css">
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script type="text/javascript">
-        (function () {
-            emailjs.init("neW5TN-qwxGTzjJrE");
-        })();
-    </script>
 </head>
 
 <body>
@@ -74,35 +68,9 @@
 
             <div id="step1">
                 <h3 style="color: var(--primary); margin-bottom: 15px;">Reset Password</h3>
-                <input type="text" id="resetID" placeholder="Roll No / Email"
+                <input type="email" id="resetID" placeholder="Registered Email"
                     style="width: 100%; padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; margin-bottom: 15px;">
-                <button class="btn-primary" onclick="handleSendOTP()" style="width: 100%;">Send OTP</button>
-            </div>
-
-            <div id="step2" style="display:none;">
-                <h3 style="color: var(--primary); margin-bottom: 15px;">Verify OTP</h3>
-                <div id="otpStatus" class="status-msg" style="margin-bottom:10px; color: green;"></div>
-                <input type="number" id="otpInput"
-                    style="text-align:center; letter-spacing:8px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-light); margin-bottom: 15px;"
-                    placeholder="000000">
-                <button class="btn-primary" onclick="handleVerifyOTP()" style="width: 100%;">Verify Code</button>
-            </div>
-
-            <div id="step3" style="display:none;">
-                <h3 style="color: var(--primary); margin-bottom: 15px;">Set New Password</h3>
-                <div style="margin-bottom: 10px; position: relative;">
-                    <input type="password" id="newP" placeholder="New Password"
-                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-light);">
-                </div>
-                <div style="margin-bottom: 15px; position: relative;">
-                    <input type="password" id="confP" placeholder="Confirm Password"
-                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-light);">
-                </div>
-                <div id="resetPassHint"
-                    style="font-size: 11px; color: #ef4444; margin-bottom: 15px; text-align: left; display: none;">
-                    Min 6 chars, special char required.
-                </div>
-                <button class="btn-primary" onclick="handleUpdatePass()" style="width: 100%;">Update Password</button>
+                <button class="btn-primary" onclick="handleSendResetEmail()" style="width: 100%;">Send Reset Email</button>
             </div>
         </div>
     </div>
@@ -110,24 +78,9 @@
     <script src="js/ui.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
-            authDomain: "college-connect-2cd42.firebaseapp.com",
-            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "college-connect-2cd42",
-            storageBucket: "college-connect-2cd42.firebasestorage.app",
-            messagingSenderId: "16394931571",
-            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        let currentOTP = null;
-        let userKeyForReset = "";
+        import { db } from "./js/firebase-config.js";
+        import { loginUser, resetPassword } from "./js/auth.js";
+        import { equalTo, get, orderByChild, query, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         // --- TOGGLE PASSWORD LOGIC ---
         window.togglePass = function (id, icon) {
@@ -158,67 +111,23 @@
                 document.getElementById('passHint').style.display = 'none';
             }
 
-            let dbPath = id.replace(/\./g, '_').toUpperCase();
-
             try {
-                const snap = await get(ref(db, `users/${dbPath}`));
-                if (snap.exists() && snap.val().password === pass) {
-                    const userData = snap.val();
-                    sessionStorage.setItem("isLoggedIn", "true");
-                    sessionStorage.setItem("role", userData.role);
-                    sessionStorage.setItem("userName", userData.name || "Student");
-                    sessionStorage.setItem("userId", dbPath);
-                    sessionStorage.setItem("studentID", dbPath);
-                    sessionStorage.setItem("dept", userData.dept || "N/A");
-                    sessionStorage.setItem("year", userData.year || "N/A");
-
-                    window.location.replace(userData.role === "admin" ? "admin/index.html" : "student/index.html");
-                } else { alert("Invalid Credentials!"); }
-            } catch (e) { alert("Login Error."); }
+                const userData = await loginUser(id, pass);
+                window.location.replace(userData.role === "admin" ? "admin/index.html" : "student/index.html");
+            } catch (e) { alert(e.code === "auth/invalid-credential" ? "Invalid Credentials!" : (e.message || "Login Error.")); }
         }
 
         // OTP Logic [cite: 2026-01-15]
-        window.handleSendOTP = async function () {
-            let inputVal = document.getElementById('resetID').value.trim();
-            if (!inputVal) return alert("Enter Roll No!");
-            userKeyForReset = inputVal.replace(/\./g, '_').toUpperCase();
-
-            const snap = await get(ref(db, `users/${userKeyForReset}`));
-            if (snap.exists()) {
-                currentOTP = Math.floor(100000 + Math.random() * 900000);
-                emailjs.send('service_pa22ohy', 'template_bkqywnv', { to_email: snap.val().email || inputVal, otp: currentOTP })
-                    .then(() => {
-                        document.getElementById('step1').style.display = 'none';
-                        document.getElementById('step2').style.display = 'block';
-                        alert("OTP Sent!");
-                    });
-            } else { alert("User not found!"); }
-        };
-
-        window.handleVerifyOTP = () => {
-            if (document.getElementById('otpInput').value == currentOTP) {
-                document.getElementById('step2').style.display = 'none';
-                document.getElementById('step3').style.display = 'block';
-            } else { alert("Invalid OTP!"); }
-        };
-
-        window.handleUpdatePass = async function () {
-            const p1 = document.getElementById('newP').value;
-            const p2 = document.getElementById('confP').value;
-
-            const passRegex = /^(?=.*[._!@#$%^&*])(?=.*[a-zA-Z]).{6,}$/;
-            if (!passRegex.test(p1)) {
-                document.getElementById('resetPassHint').style.display = 'block';
-                return;
-            } else {
-                document.getElementById('resetPassHint').style.display = 'none';
-            }
-
-            if (p1 === p2 && p1 !== "") {
-                await update(ref(db, `users/${userKeyForReset}`), { password: p1 });
-                alert("Password Updated Successfully!");
-                location.reload();
-            } else { alert("Passwords do not match!"); }
+        window.handleSendResetEmail = async function () {
+            const inputVal = document.getElementById('resetID').value.trim();
+            if (!inputVal) return alert("Enter your registered email!");
+            const snap = await get(query(ref(db, "loginDirectory"), orderByChild("email"), equalTo(inputVal)));
+            if (!snap.exists()) return alert("Email not found!");
+            try {
+                await resetPassword(inputVal);
+                closeModal();
+                alert("Password reset email sent. Check your inbox.");
+            } catch (e) { alert(e.message || "Unable to send reset email."); }
         };
 
         document.addEventListener('DOMContentLoaded', () => {

@@ -153,21 +153,8 @@
     <div id="leaveList">Loading requests...</div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
-            authDomain: "college-connect-2cd42.firebaseapp.com",
-            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "college-connect-2cd42",
-            storageBucket: "college-connect-2cd42.firebasestorage.app",
-            messagingSenderId: "16394931571",
-            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        import { db } from "../js/firebase-config.js";
+        import { ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         const advDept = sessionStorage.getItem("dept") || "IT";
         const advYear = sessionStorage.getItem("year") || "3";
 
@@ -250,6 +237,7 @@
 
         loadData();
     </script>
+    <script src="../js/guard.js"></script>
     <script src="../js/ui.js"></script>
 </body>
 

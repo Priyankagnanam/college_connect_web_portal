@@ -113,21 +113,8 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
-            authDomain: "college-connect-2cd42.firebaseapp.com",
-            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "college-connect-2cd42",
-            storageBucket: "college-connect-2cd42.firebasestorage.app",
-            messagingSenderId: "16394931571",
-            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        import { db } from "../js/firebase-config.js";
+        import { ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         // Use studentID from session to fetch real-time context [cite: 2026-01-15]
         const studentID = sessionStorage.getItem("studentID") || sessionStorage.getItem("userId");
@@ -151,7 +138,7 @@
                 currentYear = u.year || "All";
 
                 document.getElementById('d-dept').innerText = currentDept;
-                document.getElementById('d-roll').innerText = u.id || studentID;
+                document.getElementById('d-roll').innerText = u.rollNumber || u.id || studentID;
                 document.getElementById('d-year').innerText = currentYear + (isNaN(currentYear) ? "" : " Year");
             }
 
@@ -193,6 +180,7 @@
     </script>
 
 
+    <script src="../js/guard.js"></script>
     <script src="../js/ui.js"></script>
 </body>
 

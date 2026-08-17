@@ -1,0 +1,59 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "loginDirectory": {
+      ".read": true,
+      "$id": {
+        ".write": "auth != null && !data.exists() && newData.child('uid').val() == auth.uid && newData.child('role').val() == 'student'"
+      }
+    },
+    "profiles": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('admins').child(auth.uid).val() == true)",
+        ".write": "auth != null && ((auth.uid == $uid && !data.exists() && newData.child('uid').val() == auth.uid && newData.child('role').val() == 'student') || root.child('admins').child(auth.uid).val() == true)"
+      }
+    },
+    "users": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() == true",
+      "$id": {
+        ".read": "auth != null && (data.child('uid').val() == auth.uid || root.child('admins').child(auth.uid).val() == true)",
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() == auth.uid && newData.child('role').val() == 'student') || root.child('admins').child(auth.uid).val() == true)",
+        "fcmToken": {
+          ".write": "auth != null && data.parent().child('uid').val() == auth.uid"
+        }
+      }
+    },
+    "announcements": {
+      ".read": "auth != null",
+      "$id": { ".write": "auth != null && root.child('admins').child(auth.uid).val() == true" }
+    },
+    "attendance": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() == true",
+      "$studentId": {
+        ".read": "auth != null && (root.child('users').child($studentId).child('uid').val() == auth.uid || root.child('admins').child(auth.uid).val() == true)",
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() == true"
+      }
+    },
+    "marks": {
+      "$studentId": {
+        ".read": "auth != null && (root.child('users').child($studentId).child('uid').val() == auth.uid || root.child('admins').child(auth.uid).val() == true)",
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() == true"
+      }
+    },
+    "study_materials": {
+      ".read": "auth != null",
+      "$id": { ".write": "auth != null && root.child('admins').child(auth.uid).val() == true" }
+    },
+    "leaverequests": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).val() == true || (query.orderByChild == 'studentID' && query.equalTo == root.child('profiles').child(auth.uid).child('id').val()))",
+      "$id": {
+        ".read": "auth != null && (data.child('studentID').val() == root.child('profiles').child(auth.uid).child('id').val() || root.child('admins').child(auth.uid).val() == true)",
+        ".write": "auth != null && ((!data.exists() && newData.child('studentID').val() == root.child('profiles').child(auth.uid).child('id').val() && newData.child('status').val() == 'Pending') || root.child('admins').child(auth.uid).val() == true)"
+      }
+    },
+    "admins": {
+      "$uid": { ".read": "auth != null && root.child('admins').child(auth.uid).val() == true", ".write": false }
+    }
+  }
+}

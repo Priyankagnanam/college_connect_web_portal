@@ -100,7 +100,7 @@ College-Connect/
 
 ### Firebase Setup
 
-The application is pre-configured with Firebase Realtime Database. Configuration details are in [js/firebase-config.js](js/firebase-config.js):
+The application uses one shared Firebase app from [js/firebase-config.js](js/firebase-config.js). The web configuration is public Firebase application configuration; access control is provided by Firebase Authentication and Realtime Database rules.
 
 ```javascript
 - Project ID: college-connect-2cd42
@@ -109,9 +109,14 @@ The application is pre-configured with Firebase Realtime Database. Configuration
 - Messaging: Push notifications configured
 ```
 
-### Email Service
+### Required Firebase Setup
 
-Email functionality is powered by EmailJS with public key: `neW5TN-qwxGTzjJrE`
+1. Enable **Authentication > Sign-in method > Email/Password** in the Firebase console.
+2. Deploy [database.rules.json](database.rules.json) using Firebase CLI or the Firebase console.
+3. Create the first administrator in Firebase Authentication, then add its UID under `admins/<uid>` with value `true`. Also create the matching administrator profile under `profiles/<uid>` with `role: "admin"`, plus matching `users` and `loginDirectory` records. Use the normalized database key in `id` and the display roll number in `rollNumber`.
+4. Add the GitHub Pages domain to Firebase Authentication authorized domains.
+
+Password recovery uses Firebase Authentication email reset. The application does not generate client-side OTPs or store passwords in Realtime Database.
 
 ## 🚀 Usage
 

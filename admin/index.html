@@ -129,42 +129,25 @@
         </div>
     </div>
 
+    <script src="../js/guard.js"></script>
     <script src="../js/ui.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-        import { checkSession } from "../js/auth.js";
-
-        // Yellow lines varaama irukka indha config mandatory [cite: 2026-01-15]
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+        import { db } from "../js/firebase-config.js";
+        import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { requireRole, logout } from "../js/auth.js";
 
         // Bind logout to window for HTML onclick
         window.handleLogout = function () {
-            sessionStorage.clear();
-            window.location.replace("../login.html");
+            logout();
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
         // --- SESSION CHECK ---
-        const user = checkSession('admin');
-        if (!user) {
-            window.location.href = "../login.html";
-        } else {
+        requireRole('admin', (user) => {
             document.getElementById('adminName').innerText = user.name || "Administrator";
             document.getElementById('adminId').innerText = user.id || "Admin";
             document.getElementById('adminAvatar').innerText = (user.name || "A").charAt(0).toUpperCase();
-        }
+        });
 
         // Logic to update Red Badge [cite: 2026-01-15]
         const advDept = sessionStorage.getItem("dept") || "IT";

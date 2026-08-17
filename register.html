@@ -99,21 +99,7 @@
     <script src="js/ui.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZOJh_a5oDaKluV3IU6Ly2o7PlTlSEbhQ",
-            authDomain: "college-connect-2cd42.firebaseapp.com",
-            databaseURL: "https://college-connect-2cd42-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "college-connect-2cd42",
-            storageBucket: "college-connect-2cd42.firebasestorage.app",
-            messagingSenderId: "16394931571",
-            appId: "1:16394931571:web:38b8abc12ec26d7dc50906"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        import { registerUser } from "./js/auth.js";
 
         // --- Eye Icon Logic ---
         const togglePassword = document.querySelector('#togglePassword');
@@ -178,38 +164,14 @@
                 return;
             }
 
-            let dbID = rawID.replace(/\./g, '_').toUpperCase();
-
-            const strongPassRegex = /^[A-Za-z](?=.*[!@#$%^&*_])(?=.{5,})/;
-            if (!strongPassRegex.test(pass)) {
-                alert("Password Requirements not met!");
-                return;
-            }
-
             const codes = { "IT": "IMT", "CSE": "CSE", "ECE": "ECE", "EEE": "EEE", "AUTO": "ATE", "CIVIL": "CVE", "MECH": "MCE" };
-            if (!dbID.includes(codes[dept])) {
+            if (!rawID.replace(/\./g, '_').toUpperCase().includes(codes[dept])) {
                 alert(`Invalid Roll Number for ${dept}!`);
                 return;
             }
 
             try {
-                const userRef = ref(db, `users/${dbID}`);
-                const snap = await get(userRef);
-
-                if (snap.exists()) {
-                    alert("This Roll Number is already registered!");
-                    return;
-                }
-
-                await set(userRef, {
-                    name,
-                    email,
-                    id: rawID,
-                    role,
-                    dept,
-                    year,
-                    password: pass
-                });
+                await registerUser({ name, email, id: rawID, role, dept, year, password: pass });
 
                 alert("Account Created Successfully!");
                 window.location.href = "login.html";

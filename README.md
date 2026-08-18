@@ -103,8 +103,8 @@ College-Connect/
 The application uses one shared Firebase app from [js/firebase-config.js](js/firebase-config.js). The web configuration is public Firebase application configuration; access control is provided by Firebase Authentication and Realtime Database rules.
 
 ```javascript
-- Project ID: college-connect-2cd42
-- Database: asia-southeast1
+- Project ID: college-connect-ece97
+- Database: college-connect-ece97-default-rtdb
 - Storage: Enabled for file uploads
 - Messaging: Push notifications configured
 ```

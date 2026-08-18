@@ -174,6 +174,7 @@
                     <option value="ECE">ECE</option>
                     <option value="EEE">EEE</option>
                     <option value="MECH">MECH</option>
+                    <option value="AUTO">AUTO</option>
                     <option value="CIVIL">CIVIL</option>
                 </select>
             </div>
@@ -250,47 +251,66 @@
             const sem = document.getElementById('targetSem').value;
             const internal = document.getElementById('internalType').value;
 
-            if (!subject) { alert("Subject Name enter pannunga!"); return; }
-
             const studentArea = document.getElementById('studentArea');
             const tableBody = document.getElementById('studentTableBody');
             tableBody.innerHTML = "";
+            studentArea.style.display = 'none';
 
-            document.getElementById('displayInfo').innerText = `${dept} - Year ${year} | ${subject} (${sem} - ${internal})`;
+            document.getElementById('displayInfo').innerText =
+                subject ? `${dept} - Year ${year} | ${subject} (${sem} - ${internal})`
+                        : `${dept} - Year ${year} | (${sem} - ${internal})`;
 
             try {
                 const snapshot = await get(ref(db, 'users'));
-                if (snapshot.exists()) {
-                    let found = false;
-                    snapshot.forEach((child) => {
-                        const user = child.val();
-                        if (user.role === 'student' && user.dept === dept && user.year.toString() === year) {
-                            found = true;
-                            tableBody.innerHTML += `
-                            <tr data-id="${child.key}">
-                                <td>${child.key}</td>
-                                <td>${user.name}</td>
-                                <td>
-                                    <select class="status-select">
-                                        <option value="Present">Present</option>
-                                        <option value="Absent">Absent</option>
-                                    </select>
-                                </td>
-                            </tr>`;
-                        }
-                    });
-
-                    if (found) { studentArea.style.display = 'block'; }
-                    else { alert("No Students in this year/department!"); }
+                if (!snapshot.exists()) {
+                    alert("No student records found in the database yet.");
+                    return;
                 }
-            } catch (e) { alert("Error loading students!"); }
+
+                const available = {};
+                let found = false;
+                snapshot.forEach((child) => {
+                    const user = child.val();
+                    if (user.role !== 'student') return;
+                    available[`${user.dept || 'Unknown'} - Year ${user.year || '?'}`] = true;
+                    if (user.dept === dept && String(user.year).trim() === year) {
+                        found = true;
+                        tableBody.innerHTML += `
+                        <tr data-id="${child.key}">
+                            <td>${child.key}</td>
+                            <td>${user.name}</td>
+                            <td>
+                                <select class="status-select">
+                                    <option value="Present">Present</option>
+                                    <option value="Absent">Absent</option>
+                                </select>
+                            </td>
+                        </tr>`;
+                    }
+                });
+
+                if (found) {
+                    studentArea.style.display = 'block';
+                } else {
+                    const hint = Object.keys(available).length
+                        ? " Students registered for: " + Object.keys(available).join(", ") + "."
+                        : "";
+                    alert("No students found for " + dept + " - Year " + year + "." + hint);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error loading students: " + (e.message || "please try again."));
+            }
         }
+
+        const sanitizeKey = (value) => String(value || "").trim().replace(/[.#$\[\]/]/g, "_");
 
         window.saveAttendance = async function () {
             const subject = document.getElementById('subjectName').value.trim();
+            if (!subject) { alert("Enter the subject name before submitting attendance."); return; }
             const sem = document.getElementById('targetSem').value;
             const internal = document.getElementById('internalType').value;
-            const date = document.getElementById('attDate').value || new Date().toLocaleDateString();
+            const date = document.getElementById('attDate').value || new Date().toISOString().slice(0, 10);
 
             const rows = document.querySelectorAll('#studentTableBody tr');
             const updates = {};
@@ -301,7 +321,7 @@
 
                 // Refined Database Structure for Internal Tracking [cite: 2026-01-15]
                 // Path: attendance/STUDENTID/SEM/SUBJECT/INTERNAL/DATE
-                const path = `attendance/${sID}/${sem}/${subject}/${internal}/${date}`;
+                const path = `attendance/${sID}/${sanitizeKey(sem)}/${sanitizeKey(subject)}/${sanitizeKey(internal)}/${date}`;
 
                 updates[path] = {
                     status: status,
@@ -309,11 +329,16 @@
                 };
             });
 
+            if (Object.keys(updates).length === 0) { alert("Load the student list before submitting."); return; }
+
             try {
                 await update(ref(db), updates);
                 alert("Attendance successfully uploaded for " + internal);
                 location.reload();
-            } catch (e) { alert("Upload failed!"); }
+            } catch (e) {
+                console.error(e);
+                alert("Upload failed: " + (e.message || "please try again."));
+            }
         }
     </script>
 

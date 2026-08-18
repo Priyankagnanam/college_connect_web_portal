@@ -116,17 +116,17 @@
         document.addEventListener('DOMContentLoaded', () => {
             const fields = ['regName', 'regEmail', 'regID', 'regDept', 'regYear', 'regPass'];
 
-            fields.forEach((id, index) => {
-                const currentField = document.getElementById(id);
+            fields.forEach((fieldId, fieldIndex) => {
+                const currentField = document.getElementById(fieldId);
                 if (!currentField) return;
 
                 currentField.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        if (id === 'regPass') {
+                        if (fieldId === 'regPass') {
                             window.registerUser();
                         } else {
-                            const nextField = document.getElementById(fields[index + 1]);
+                            const nextField = document.getElementById(fields[fieldIndex + 1]);
                             if (nextField) nextField.focus();
                         }
                     }
@@ -178,7 +178,14 @@
 
             } catch (e) {
                 console.error(e);
-                alert("Connection error. Please try again.");
+                const messages = {
+                    "auth/email-already-in-use": "This email is already registered. Please log in instead.",
+                    "auth/invalid-email": "Please enter a valid email address.",
+                    "auth/weak-password": "Password must be at least 6 characters long.",
+                    "PERMISSION_DENIED": "Registration was blocked by Firebase permissions.",
+                    "database/permission-denied": "Registration was blocked by Firebase permissions."
+                };
+                alert(messages[e.code] || e.message || "Registration failed. Please try again.");
             }
         }
     </script>

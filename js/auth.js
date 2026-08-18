@@ -7,7 +7,7 @@ import {
     signInWithEmailAndPassword,
     signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { equalTo, get, orderByChild, query, ref, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { get, ref, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 /**
  * Formats the ID for Firebase keys (e.g., replaces '.' with '_').
@@ -25,15 +25,20 @@ export async function loginUser(rawID, password) {
         throw new Error("Please enter both ID and Password.");
     }
 
-    const lookupField = rawID.includes("@") ? "email" : "id";
-    const snapshot = await get(query(ref(db, "loginDirectory"), orderByChild(lookupField), equalTo(rawID.trim())));
-    if (!snapshot.exists()) throw new Error("User ID not found!");
-
-    const [key, directoryData] = Object.entries(snapshot.val())[0];
-    const credential = await signInWithEmailAndPassword(auth, directoryData.email, password);
+    let key;
+    let credential;
+    if (rawID.includes("@")) {
+        credential = await signInWithEmailAndPassword(auth, rawID.trim(), password);
+    } else {
+        key = formatID(rawID);
+        const snapshot = await get(ref(db, `loginDirectory/${key}`));
+        if (!snapshot.exists()) throw new Error("User ID not found!");
+        credential = await signInWithEmailAndPassword(auth, snapshot.val().email, password);
+    }
     const profileSnapshot = await get(ref(db, `profiles/${credential.user.uid}`));
     if (!profileSnapshot.exists()) throw new Error("Account profile not found.");
     const userData = profileSnapshot.val();
+    key = key || formatID(userData.id);
 
     saveSession(key, { ...userData, uid: credential.user.uid });
     return { ...userData, uid: credential.user.uid, id: key };
@@ -47,12 +52,6 @@ export async function registerUser(data) {
     const dbID = formatID(id);
 
     if (role !== "student") throw new Error("Only student self-registration is allowed.");
-    const snapshot = await get(ref(db, `loginDirectory/${dbID}`));
-
-    if (snapshot.exists()) {
-        throw new Error("User ID already registered!");
-    }
-
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     const profile = { name, email, id: dbID, rollNumber: id, role, dept, year, uid: credential.user.uid };
     try {
@@ -62,7 +61,11 @@ export async function registerUser(data) {
             [`loginDirectory/${dbID}`]: { id, email, role, uid: credential.user.uid }
         });
     } catch (error) {
-        await deleteUser(credential.user);
+        try {
+            await deleteUser(credential.user);
+        } finally {
+            await signOut(auth).catch(() => {});
+        }
         throw error;
     }
 

@@ -147,11 +147,13 @@
             document.getElementById('adminName').innerText = user.name || "Administrator";
             document.getElementById('adminId').innerText = user.id || "Admin";
             document.getElementById('adminAvatar').innerText = (user.name || "A").charAt(0).toUpperCase();
+            updateBadge();
         });
 
         // Logic to update Red Badge [cite: 2026-01-15]
         const advDept = sessionStorage.getItem("dept") || "IT";
         const advYear = sessionStorage.getItem("year") || "3";
+        const isAdmin = sessionStorage.getItem("role") === "admin";
 
         function updateBadge() {
             const leaveRef = ref(db, 'leaverequests/');
@@ -160,7 +162,7 @@
                 if (snapshot.exists()) {
                     snapshot.forEach(child => {
                         const data = child.val();
-                        if (data.status === "Pending" && data.dept === advDept && data.year === advYear) {
+                        if (data.status === "Pending" && (isAdmin || (data.dept === advDept && data.year === advYear))) {
                             count++;
                         }
                     });
@@ -172,10 +174,10 @@
                 } else {
                     badgeElement.style.display = "none";
                 }
+            }, (error) => {
+                window.showToast?.(error.message || "Unable to load pending requests.", "error");
             });
         }
-
-        updateBadge();
     </script>
 </body>
 

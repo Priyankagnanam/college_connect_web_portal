@@ -78,9 +78,7 @@
     <script src="js/ui.js"></script>
 
     <script type="module">
-        import { db } from "./js/firebase-config.js";
         import { loginUser, resetPassword } from "./js/auth.js";
-        import { equalTo, get, orderByChild, query, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         // --- TOGGLE PASSWORD LOGIC ---
         window.togglePass = function (id, icon) {
@@ -103,8 +101,8 @@
             let pass = document.getElementById('logPass').value;
             if (!id || !pass) return alert("Fill all fields.");
 
-            const passRegex = /^(?=.*[._!@#$%^&*])(?=.*[a-zA-Z]).{6,}$/;
-            if (!passRegex.test(pass)) {
+            if (pass.length < 6) {
+                document.getElementById('passHint').innerText = "Password must be at least 6 characters.";
                 document.getElementById('passHint').style.display = 'block';
                 return;
             } else {
@@ -121,8 +119,6 @@
         window.handleSendResetEmail = async function () {
             const inputVal = document.getElementById('resetID').value.trim();
             if (!inputVal) return alert("Enter your registered email!");
-            const snap = await get(query(ref(db, "loginDirectory"), orderByChild("email"), equalTo(inputVal)));
-            if (!snap.exists()) return alert("Email not found!");
             try {
                 await resetPassword(inputVal);
                 closeModal();

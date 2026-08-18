@@ -171,6 +171,9 @@
             } else {
                 container.innerHTML = "<p style='text-align:center; padding-top:50px;'>No data found.</p>";
             }
+        }, (error) => {
+            container.innerHTML = "<p style='text-align:center; padding-top:50px;'>Unable to load leave status right now.</p>";
+            window.showToast?.(error.message || "Unable to load leave status.", "error");
         });
     </script>
 

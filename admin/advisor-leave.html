@@ -157,6 +157,7 @@
         import { ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         const advDept = sessionStorage.getItem("dept") || "IT";
         const advYear = sessionStorage.getItem("year") || "3";
+        const isAdmin = sessionStorage.getItem("role") === "admin";
 
         async function loadData() {
             onValue(ref(db, 'leaverequests/'), (snapshot) => {
@@ -165,9 +166,9 @@
                 if (snapshot.exists()) {
                     snapshot.forEach(child => {
                         const d = child.val();
-                        if (d.dept === advDept) {
+                        if (isAdmin || d.dept === advDept) {
                             counts[d.name] = (counts[d.name] || 0) + 1;
-                            if (d.status === "Pending" && d.year === advYear) {
+                            if (d.status === "Pending" && (isAdmin || d.year === advYear)) {
                                 listHTML += `<div class="request-card">
                                     <div><p><b>Student:</b> ${d.name} (${d.studentID})</p><p><b>Reason:</b> ${d.reason}</p></div>
                                     <div class="btn-group">
@@ -182,6 +183,9 @@
                 document.getElementById('leaveList').innerHTML = listHTML || "No pending requests.";
                 const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a).slice(0, 3);
                 document.getElementById('frequentList').innerHTML = sorted.map(([n, c]) => `<div class="insight-item"><span>${n}</span><span>${c} Times</span></div>`).join('') || "No records.";
+            }, (error) => {
+                document.getElementById('leaveList').innerText = "Unable to load pending requests.";
+                window.showToast?.(error.message || "Unable to load pending requests.", "error");
             });
 
             // 2. Logic updated to 75% [cite: 2026-01-15]

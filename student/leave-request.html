@@ -244,11 +244,16 @@
                 timestamp: new Date().toISOString()
             };
 
-            push(ref(db, 'leaverequests'), leaveData).then(() => {
-                document.getElementById('statusMsg').innerText = "Request Sent Successfully!";
-                document.getElementById('leaveForm').reset();
-                toggleDateFields();
-            });
+            push(ref(db, 'leaverequests'), leaveData)
+                .then(() => {
+                    document.getElementById('statusMsg').innerText = "Request Sent Successfully!";
+                    document.getElementById('leaveForm').reset();
+                    toggleDateFields();
+                })
+                .catch((error) => {
+                    document.getElementById('statusMsg').innerText = "Unable to submit leave request.";
+                    window.showToast?.(error.message || "Unable to submit leave request.", "error");
+                });
         });
     </script>
 

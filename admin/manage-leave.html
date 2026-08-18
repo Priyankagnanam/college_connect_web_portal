@@ -115,6 +115,7 @@
         const advDept = sessionStorage.getItem("dept") || "IT";
         const advYear = sessionStorage.getItem("year") || "3";
         const advName = sessionStorage.getItem("userName") || "Advisor";
+        const isAdmin = sessionStorage.getItem("role") === "admin";
 
         document.getElementById('advisorDetails').innerHTML =
             `<i class="fas fa-user-tie"></i> Welcome <b>${advName}</b> | Advisor for: <b>${advDept} - Year ${advYear}</b>`;
@@ -135,7 +136,7 @@
             snapshot.forEach(child => {
                 const data = child.val();
 
-                if (data.status === "Pending" && data.dept === advDept && data.year === advYear) {
+                if (data.status === "Pending" && (isAdmin || (data.dept === advDept && data.year === advYear))) {
                     count++;
                     listDiv.innerHTML += `
                         <div class="leave-card">
@@ -156,6 +157,9 @@
             if (count === 0) {
                 listDiv.innerHTML = "<p style='text-align:center;'>No pending requests for your Department/Year.</p>";
             }
+        }, (error) => {
+            document.getElementById('leaveList').innerHTML = "<p style='text-align:center;'>Unable to load pending requests.</p>";
+            window.showToast?.(error.message || "Unable to load pending requests.", "error");
         });
 
         window.updateStatus = function (requestId, newStatus) {

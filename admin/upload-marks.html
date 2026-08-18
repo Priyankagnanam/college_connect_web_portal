@@ -257,8 +257,6 @@
             const sem = document.getElementById('targetSem').value;
             const type = document.getElementById('internalType').value;
 
-            if (!subject) { alert("Fill the Subject name!"); return; }
-
             const loading = document.getElementById('loading');
             const studentArea = document.getElementById('studentArea');
             const tableBody = document.getElementById('studentTableBody');
@@ -266,33 +264,54 @@
             loading.style.display = 'block';
             studentArea.style.display = 'none';
             tableBody.innerHTML = "";
-            document.getElementById('displayInfo').innerText = `${sem} | ${type} | ${subject}`;
+            document.getElementById('displayInfo').innerText =
+                subject ? `${sem} | ${type} | ${subject}` : `${sem} | ${type}`;
 
             try {
                 const snapshot = await get(ref(db, 'users'));
-                if (snapshot.exists()) {
-                    let found = false;
-                    snapshot.forEach((child) => {
-                        const user = child.val();
-                        if (user.role === 'student' && user.dept === dept && user.year.toString() === year) {
-                            found = true;
-                            tableBody.innerHTML += `
-                            <tr data-id="${child.key}">
-                                <td>${child.key}</td>
-                                <td>${user.name}</td>
-                                <td><input type="number" class="mark-input" oninput="validateMarkInput(this)" placeholder="Score"></td>
-                            </tr>`;
-                        }
-                    });
-                    if (found) studentArea.style.display = 'block';
-                    else alert("No Students!");
+                if (!snapshot.exists()) {
+                    alert("No student records found in the database yet.");
+                    return;
                 }
-            } catch (e) { console.error(e); }
-            loading.style.display = 'none';
+
+                const available = {};
+                let found = false;
+                snapshot.forEach((child) => {
+                    const user = child.val();
+                    if (user.role !== 'student') return;
+                    available[`${user.dept || 'Unknown'} - Year ${user.year || '?'}`] = true;
+                    if (user.dept === dept && String(user.year).trim() === year) {
+                        found = true;
+                        tableBody.innerHTML += `
+                        <tr data-id="${child.key}">
+                            <td>${child.key}</td>
+                            <td>${user.name}</td>
+                            <td><input type="number" class="mark-input" oninput="validateMarkInput(this)" placeholder="Score"></td>
+                        </tr>`;
+                    }
+                });
+
+                if (found) {
+                    studentArea.style.display = 'block';
+                } else {
+                    const hint = Object.keys(available).length
+                        ? " Students registered for: " + Object.keys(available).join(", ") + "."
+                        : "";
+                    alert("No students found for " + dept + " - Year " + year + "." + hint);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error loading students: " + (e.message || "please try again."));
+            } finally {
+                loading.style.display = 'none';
+            }
         }
+
+        const sanitizeKey = (value) => String(value || "").trim().replace(/[.#$\[\]/]/g, "_");
 
         window.saveBulkMarks = async function () {
             const subject = document.getElementById('subjectName').value.trim();
+            if (!subject) { alert("Enter the subject name before uploading marks."); return; }
             const sem = document.getElementById('targetSem').value;
             const type = document.getElementById('internalType').value;
             const rows = document.querySelectorAll('#studentTableBody tr');
@@ -303,7 +322,7 @@
                 const score = row.querySelector('.mark-input').value;
                 if (score !== "") {
                     // Hierarchical structure: marks/rollNo/Semester/Subject/InternalType
-                    updates[`marks/${sID}/${sem}/${subject}/${type}`] = parseFloat(score);
+                    updates[`marks/${sID}/${sanitizeKey(sem)}/${sanitizeKey(subject)}/${sanitizeKey(type)}`] = parseFloat(score);
                 }
             });
 
@@ -313,7 +332,10 @@
                 await update(ref(db), updates);
                 alert("Marks uploaded successfully!");
                 location.reload();
-            } catch (e) { alert("Error saving marks!"); }
+            } catch (e) {
+                console.error(e);
+                alert("Error saving marks: " + (e.message || "please try again."));
+            }
         }
     </script>
 

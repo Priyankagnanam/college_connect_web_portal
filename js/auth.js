@@ -31,7 +31,16 @@ export async function loginUser(rawID, password) {
         credential = await signInWithEmailAndPassword(auth, rawID.trim(), password);
     } else {
         key = formatID(rawID);
-        const snapshot = await get(ref(db, `loginDirectory/${key}`));
+        let snapshot;
+        try {
+            snapshot = await get(ref(db, `loginDirectory/${key}`));
+        } catch (e) {
+            const code = (e && (e.code || e.message) || "").toLowerCase();
+            if (code.includes("permission") || code.includes("denied")) {
+                throw new Error("User ID not found!");
+            }
+            throw e;
+        }
         if (!snapshot.exists()) throw new Error("User ID not found!");
         credential = await signInWithEmailAndPassword(auth, snapshot.val().email, password);
     }

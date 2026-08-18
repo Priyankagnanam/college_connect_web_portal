@@ -159,6 +159,12 @@ export function requireRole(requiredRole, onAuthorized) {
     });
 }
 
-export async function resetPassword(email) {
+export async function resetPassword(identifier) {
+    let email = String(identifier || "").trim();
+    if (!email.includes("@")) {
+        const snapshot = await get(ref(db, `loginDirectory/${formatID(email)}`));
+        if (!snapshot.exists()) throw new Error("User ID not found!");
+        email = snapshot.val().email;
+    }
     return sendPasswordResetEmail(auth, email);
 }

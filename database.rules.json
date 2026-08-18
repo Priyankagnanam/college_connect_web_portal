@@ -71,6 +71,7 @@
       }
     },
     "leaverequests": {
+      ".indexOn": ["studentID"],
       ".read": "auth != null && (root.child('admins').child(auth.uid).val() == true || (query.orderByChild == 'studentID' && query.equalTo == root.child('profiles').child(auth.uid).child('id').val()))",
       "$id": {
         ".read": "auth != null && (data.child('studentID').val() == root.child('profiles').child(auth.uid).child('id').val() || root.child('admins').child(auth.uid).val() == true)",

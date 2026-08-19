@@ -2,7 +2,9 @@
 
 > A comprehensive web-based platform for college management and communication — bridging students and administrators with an intuitive interface for academic management.
 
-**Live Demo:** [https://priyankagnanam.github.io/college_connect_web_portal/](https://priyankagnanam.github.io/college_connect_web_portal/)
+**Live Demo (GitHub Pages):** [https://priyankagnanam.github.io/college_connect_web_portal/](https://priyankagnanam.github.io/college_connect_web_portal/)
+
+**Live Demo (Netlify):** [https://college-connect-web-portal.netlify.app/](https://college-connect-web-portal.netlify.app/)
 
 **Repository:** [github.com/Priyankagnanam/college_connect_web_portal](https://github.com/Priyankagnanam/college_connect_web_portal)
 
